@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mbi"
+version = "0.1.0"
+description = "BI de marketplace com dados sintéticos, análises verificáveis e analista de IA com SQL somente leitura."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = ["pandas>=2.1", "numpy>=1.26", "python-dotenv>=1.0", "google-genai>=1.0"]
+
+[project.optional-dependencies]
+ui = ["streamlit>=1.35", "altair>=5"]
+dev = ["pytest>=8"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+mbi = ["prompts/*.md"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

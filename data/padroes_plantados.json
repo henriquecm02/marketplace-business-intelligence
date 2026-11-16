@@ -1,0 +1,28 @@
+{
+  "categoria_em_queda": {
+    "categoria": "Luminárias",
+    "desde": "2026-05-01",
+    "ritmo_mensal_pct": -6
+  },
+  "categoria_em_alta": {
+    "categoria": "Têxteis",
+    "ritmo_trimestral_pct": 4
+  },
+  "regiao_com_atraso": {
+    "regiao": "Norte",
+    "desde": "2026-03-01",
+    "atraso_extra_dias": "5 a 10",
+    "efeitos": [
+      "nota menor",
+      "menos recompra"
+    ]
+  },
+  "sazonalidade": [
+    "novembro (Black Friday, 15% de desconto)",
+    "dezembro"
+  ],
+  "periodo": [
+    "2024-01-01",
+    "2026-10-31"
+  ]
+}
