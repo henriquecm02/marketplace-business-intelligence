@@ -4,6 +4,9 @@
 
 ![Dashboard](docs/img/dashboard.gif)
 
+> GIF gravado com o dashboard rodando e o **analista de IA ao vivo** (`gemini-3.5-flash-lite`). A pergunta do GIF (região com problema de entrega) é uma das que o analista acertou na avaliação, e os números da resposta (Norte: 9,9 para 16,5 dias, nota de 3,26 para 2,4, recompra de 62,3% para 28,0%) foram conferidos contra os dados. A pergunta que vem preenchida por padrão na aba, sobre queda de vendas, é a que ele respondeu só **parcialmente**; veja [Validação do analista com o Gemini real](#validação-do-analista-com-o-gemini-real).
+
+
 ## A ideia central: dados com gabarito
 
 Uma IA que "encontra insights" só é útil se os insights forem verdadeiros. Por isso, os dados sintéticos têm **padrões plantados de propósito** ([`padroes_plantados.json`](data/padroes_plantados.json)), e os testes verificam se as análises encontram exatamente esses padrões, sem inventar outros:
