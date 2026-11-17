@@ -2,7 +2,7 @@
 
 **BI completo de um marketplace fictício de casa e decoração: KPIs, tendências de categoria, entrega × satisfação, coortes, churn, sazonalidade, previsão e um analista de IA que responde perguntas da diretoria usando ferramentas de análise e SQL somente leitura.**
 
-![Dashboard](docs/img/dashboard.png)
+![Dashboard](docs/img/dashboard.gif)
 
 ## A ideia central: dados com gabarito
 
