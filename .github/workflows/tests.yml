@@ -10,3 +10,5 @@ jobs:
           python-version: "3.12"
       - run: pip install -e ".[dev]"
       - run: pytest -q
+      - name: Padrões plantados em base limpa e suja (sem LLM)
+        run: python eval/padroes.py

@@ -122,3 +122,30 @@ def test_analyst_uses_tools_and_reports_blocked_sql(db):
     tool_results = dict(llm.chat_inputs[-1][-1].tool_results)
     assert "Consulta bloqueada" in tool_results["run_sql"]["erro"]
     assert any(c["classificacao"] == "queda" for c in tool_results["category_trends"]["categorias"])
+
+
+# ------------------------------------------------------------------ dados sujos e limpeza
+def test_base_limpa_nao_recebe_correcoes(db):
+    q = A.Data(db).qualidade
+    assert q["total_de_correcoes"] == 0
+
+
+def test_limpeza_recupera_padroes_e_receita_na_base_suja(db, tmp_path):
+    from mbi.dirty import sujar
+
+    suja = tmp_path / "sujo.db"
+    inj = sujar(db, suja)
+    sem, com, ref = A.Data(suja, limpar=False), A.Data(suja), A.Data(db)
+    assert len(A.region_delivery(sem, "2026-03-01")["regioes"]) > 5  # variantes de escrita viram "regiões"
+    assert len(A.region_delivery(com, "2026-03-01")["regioes"]) == 5
+    assert com.qualidade["pedidos_duplicados_removidos"] == inj["pedidos_duplicados"]
+    receita = lambda d: A.kpis(d, "2024-01-01", "2026-10-31")["receita"]  # noqa: E731
+    assert abs(receita(com) / receita(ref) - 1) < 0.001 < abs(receita(sem) / receita(ref) - 1)
+    trends = {c["categoria"]: c["classificacao"] for c in A.category_trends(com)["categorias"]}
+    assert trends["Luminárias"] == "queda" and trends["Têxteis"] == "alta"
+
+
+def test_ferramenta_de_qualidade_disponivel_para_o_analista():
+    from mbi.analyst import TOOLS
+
+    assert "data_quality" in TOOLS

@@ -1,0 +1,125 @@
+{
+  "base_limpa": {
+    "casos": {
+      "Luminárias classificada como queda": true,
+      "Têxteis classificada como alta": true,
+      "nenhuma outra categoria em queda": true,
+      "Norte é a região com maior piora de prazo": true,
+      "nota do Norte cai depois de mar/2026": true,
+      "só 5 regiões (sem variantes de escrita)": true,
+      "pico de receita em nov ou dez": true,
+      "prazo médio sem valores negativos": true
+    },
+    "acertos": 8,
+    "total": 8,
+    "receita": 4050685.37,
+    "erro_receita_pct": null,
+    "categorias_queda": [
+      "Luminárias"
+    ],
+    "regioes": [
+      "Centro-Oeste",
+      "Nordeste",
+      "Norte",
+      "Sudeste",
+      "Sul"
+    ],
+    "qualidade": {
+      "status_padronizados": 0,
+      "regioes_padronizadas": 0,
+      "pedidos_duplicados_removidos": 0,
+      "itens_preco_invalido": 0,
+      "itens_preco_suspeito": 0,
+      "prazos_negativos_anulados": 0,
+      "total_de_correcoes": 0
+    }
+  },
+  "problemas_injetados": {
+    "pedidos_duplicados": 866,
+    "status_variantes": 2252,
+    "regioes_variantes": 480,
+    "precos_x100": 169,
+    "precos_nulos": 169,
+    "prazos_negativos": 67
+  },
+  "suja_sem_limpeza": {
+    "casos": {
+      "Luminárias classificada como queda": false,
+      "Têxteis classificada como alta": false,
+      "nenhuma outra categoria em queda": true,
+      "Norte é a região com maior piora de prazo": false,
+      "nota do Norte cai depois de mar/2026": true,
+      "só 5 regiões (sem variantes de escrita)": false,
+      "pico de receita em nov ou dez": true,
+      "prazo médio sem valores negativos": true,
+      "receita total a até 1% da base limpa": false
+    },
+    "acertos": 4,
+    "total": 9,
+    "receita": 3795044.62,
+    "erro_receita_pct": 6.31,
+    "categorias_queda": [],
+    "regioes": [
+      "CENTRO-OESTE",
+      "Centro-Oeste",
+      "Centro-Oeste ",
+      "NORDESTE",
+      "NORTE",
+      "Nordeste",
+      "Nordeste ",
+      "Norte",
+      "Norte ",
+      "SUDESTE",
+      "SUL",
+      "Sudeste",
+      "Sudeste ",
+      "Sul",
+      "Sul ",
+      "centro-oeste",
+      "nordeste",
+      "norte",
+      "sudeste",
+      "sul"
+    ],
+    "qualidade": {
+      "limpeza": "desligada"
+    }
+  },
+  "suja_com_limpeza": {
+    "casos": {
+      "Luminárias classificada como queda": true,
+      "Têxteis classificada como alta": true,
+      "nenhuma outra categoria em queda": true,
+      "Norte é a região com maior piora de prazo": true,
+      "nota do Norte cai depois de mar/2026": true,
+      "só 5 regiões (sem variantes de escrita)": true,
+      "pico de receita em nov ou dez": true,
+      "prazo médio sem valores negativos": true,
+      "receita total a até 1% da base limpa": true
+    },
+    "acertos": 9,
+    "total": 9,
+    "receita": 4050685.37,
+    "erro_receita_pct": 0.0,
+    "categorias_queda": [
+      "Luminárias"
+    ],
+    "regioes": [
+      "Centro-Oeste",
+      "Nordeste",
+      "Norte",
+      "Sudeste",
+      "Sul"
+    ],
+    "qualidade": {
+      "status_padronizados": 2252,
+      "regioes_padronizadas": 480,
+      "pedidos_duplicados_removidos": 866,
+      "itens_duplicados_removidos": 1276,
+      "itens_preco_invalido": 169,
+      "itens_preco_suspeito": 169,
+      "prazos_negativos_anulados": 66,
+      "total_de_correcoes": 5278
+    }
+  }
+}

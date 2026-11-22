@@ -96,6 +96,10 @@ TOOLS = {
     "forecast": (ToolSpec("forecast", "Previsão de receita dos próximos meses (total ou por categoria), com erro "
                           "de backtest (MAPE).", _obj({"categoria": {"type": "string"}, "meses": {"type": "integer"}})),
                  lambda d, db, a: A.forecast(d, a.get("categoria"), int(a.get("meses", 3)))),
+    "data_quality": (ToolSpec("data_quality", "O que a limpeza automática corrigiu nos dados (duplicatas, preços "
+                              "inválidos, grafias de status e região). Use quando os números parecerem estranhos ou "
+                              "para citar a confiabilidade da análise.", _obj({})),
+                     lambda d, db, a: A.data_quality(d)),
     "run_sql": (ToolSpec("run_sql", "Consulta SQL somente leitura (SELECT/WITH, até 200 linhas) para perguntas que "
                          "as outras ferramentas não cobrem.\n" + SCHEMA_DOC, _obj({"query": {"type": "string"}},
                                                                                   ["query"])),

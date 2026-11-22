@@ -44,11 +44,12 @@ Os testes tentam `DELETE`, `UPDATE`, `DROP`, múltiplos comandos, `ATTACH`, `PRA
 
 | Componente | Status |
 |---|---|
-| Gerador com padrões plantados e análises determinísticas | ✅ 17 testes, incluindo o gabarito |
+| Gerador com padrões plantados e análises determinísticas | ✅ 20 testes, incluindo o gabarito e a limpeza de dados sujos |
+| Padrões encontrados em base suja | ✅ 9/9 com limpeza (4/9 sem); roda no CI |
 | SQL somente leitura | ✅ 7 tentativas de ataque bloqueadas + limite de tempo e de linhas |
 | Dashboard (5 abas) | ✅ executado |
 | Previsão | ✅ erro médio (MAPE) de 22,1% no backtest de 6 meses, mostrado no próprio gráfico |
-| Analista de IA com o **Gemini real** | ✅ 6 perguntas com gabarito: 5 corretas, 1 parcial (veja a seção abaixo) |
+| Analista de IA com o **Gemini real** | ✅ 6 perguntas com gabarito: 5 corretas, 1 parcial (veja a seção abaixo); ⏳ as 16 novas perguntas ainda não rodaram |
 
 ## Validação do analista com o Gemini real
 
@@ -69,6 +70,37 @@ Os testes tentam `DELETE`, `UPDATE`, `DROP`, múltiplos comandos, `ATTACH`, `PRA
 
 Limites: 6 perguntas, um modelo (o de menor custo), uma rodada, dados sintéticos limpos. O objetivo é mostrar o fluxo com o Gemini real e onde ele erra, não medir acurácia. O verificador automático também errou uma vez no caminho (um falso positivo que corrigi depois de ler a resposta), por isso o veredito acima é o humano.
 
+## Versão 2: dados sujos e mais perguntas
+
+**Dados sujos.** Bases reais não chegam limpas. `mbi.dirty` cria uma cópia da base com os problemas mais comuns:
+- 866 pedidos ingeridos duas vezes;
+- 2.252 status escritos de outro jeito ("ENTREGUE", " entregue");
+- 480 regiões com outra grafia ("norte ");
+- 169 preços digitados ×100 e 169 preços vazios;
+- 67 prazos de entrega negativos.
+
+A carga dos dados (`Data`) agora limpa tudo isso antes de qualquer análise e registra o que corrigiu. A nova ferramenta `data_quality` deixa o analista citar essas correções. Na base original, a limpeza não corrige nada.
+
+`python eval/padroes.py` confere, sem LLM, se as ferramentas encontram os padrões plantados ([resultado](eval/resultados_padroes.md)):
+
+| Verificação | Base limpa | Suja, sem limpeza | Suja, com limpeza |
+|---|---|---|---|
+| Luminárias em queda | ok | **falhou** | ok |
+| Têxteis em alta | ok | **falhou** | ok |
+| Nenhuma outra categoria em queda | ok | ok | ok |
+| Norte com a maior piora de prazo | ok | **falhou** | ok |
+| Nota do Norte cai depois de mar/2026 | ok | ok | ok |
+| Só 5 regiões (sem variantes de grafia) | ok | **falhou** | ok |
+| Pico de receita em nov ou dez | ok | ok | ok |
+| Receita total a até 1% da base limpa | — | **falhou (6,31% de erro)** | ok (0,00%) |
+| **Total** | 8/8 | **4/9** | **9/9** |
+
+Sem limpeza, a base suja esconde as duas tendências de categoria, divide o Norte em variantes de grafia (o que tira dele a "maior piora de prazo") e infla a receita em 6,31% por causa das vendas duplicadas. O teste roda no CI.
+
+**Prompt.** Na versão 1, o analista respondeu "o que está caindo?" no nível de produto, sem chamar `category_trends`. O prompt agora manda chamar a tendência de categoria antes da de produto, e avisa que `run_sql` lê a base bruta, sem limpeza.
+
+**Mais perguntas.** A avaliação com o Gemini passou de 6 para 22 perguntas. As novas incluem armadilhas de ruído contra tendência ("Banho está em queda?", que é estável), datas de início dos padrões, recompra, mês mais fraco, previsão com erro, qualidade dos dados, perguntas sem dado e duas tentativas de alterar o banco. **As 16 novas ainda não foram rodadas**, porque esta versão foi feita sem chave de API.
+
 ## Como rodar
 
 ```bash
@@ -81,13 +113,16 @@ streamlit run app/streamlit_app.py     # aba "Analista de IA" exige GEMINI_API_K
 
 ## Limitações
 
-- Dados sintéticos: os padrões são mais limpos que os de um negócio real.
+- Dados sintéticos: os padrões são mais limpos que os de um negócio real. O modo sujo cobre problemas comuns de formato e duplicidade, mas não ruído de negócio (devoluções, fraudes, mudanças de catálogo).
+- A limpeza descarta preços mais de 20 vezes acima da mediana do produto. Um produto que de fato mudou muito de preço precisaria de outra regra.
 - A previsão é sazonal ingênua com tendência: simples e explicável, mas com erro alto em categorias pequenas.
 - A conversão vem de uma tabela de sessões agregada por dia, sem funil detalhado.
 
 ## Roadmap
 
-- [ ] Ampliar a avaliação do analista (hoje 6 perguntas) e comparar modelos; melhorar o prompt para consultar `category_trends` antes de apontar queda por produto
+- [x] Ampliar a avaliação do analista para 22 perguntas e ajustar o prompt para consultar `category_trends` antes de apontar queda por produto
+- [x] Dados sujos e limpeza automática com relatório
+- [ ] Rodar as 22 perguntas com o Gemini, em várias rodadas e modelos
 - [ ] Relatório executivo semanal gerado automaticamente
 - [ ] Alertas quando uma categoria passar a ter tendência significativa
 

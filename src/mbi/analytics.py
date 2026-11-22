@@ -13,7 +13,7 @@ import pandas as pd
 
 
 class Data:
-    def __init__(self, db: Path):
+    def __init__(self, db: Path, limpar: bool = True):
         con = sqlite3.connect(db)
         self.orders = pd.read_sql("SELECT * FROM pedidos", con, parse_dates=["data", "data_entrega"])
         self.items = pd.read_sql("SELECT i.*, p.categoria, p.nome FROM itens_pedido i JOIN produtos p USING(produto_id)",
@@ -22,6 +22,7 @@ class Data:
         self.customers = pd.read_sql("SELECT * FROM clientes", con)
         self.sessions = pd.read_sql("SELECT * FROM sessoes", con, parse_dates=["data"])
         con.close()
+        self.qualidade = limpar_dados(self) if limpar else {"limpeza": "desligada"}
         self.orders = self.orders.merge(self.customers[["cliente_id", "regiao"]], on="cliente_id")
         delivered = self.orders[self.orders["status"] == "entregue"][["pedido_id", "data"]]
         self.lines = self.items.merge(delivered, on="pedido_id")
@@ -29,9 +30,60 @@ class Data:
         self.last_day = self.orders["data"].max()
 
 
+def limpar_dados(d: Data) -> dict:
+    """Corrige problemas comuns de bases reais antes de qualquer análise e devolve o que foi feito.
+
+    - status e região: espaços e maiúsculas padronizados;
+    - pedido repetido (mesmo pedido_id): fica uma linha, e os itens repetidos da ingestão dupla saem;
+    - preço vazio ou não positivo: linha descartada;
+    - preço mais de 20 vezes acima da mediana do produto: tratado como erro de digitação e descartado;
+    - prazo de entrega negativo: vira ausente (não entra em médias de prazo).
+    """
+    rep: dict = {}
+    o = d.orders
+    status = o["status"].astype(str).str.strip().str.lower()
+    rep["status_padronizados"] = int((status != o["status"]).sum())
+    o["status"] = status
+    regiao = d.customers["regiao"].astype(str).str.strip().str.title()
+    rep["regioes_padronizadas"] = int((regiao != d.customers["regiao"]).sum())
+    d.customers["regiao"] = regiao
+
+    copias = o.groupby("pedido_id").size()
+    rep["pedidos_duplicados_removidos"] = int((copias - 1).sum())
+    d.orders = o.drop_duplicates("pedido_id", keep="first").copy()
+    it = d.items
+    if rep["pedidos_duplicados_removidos"]:
+        k = it["pedido_id"].map(copias).fillna(1)
+        chave = ["pedido_id", "produto_id", "quantidade", "preco_unitario"]
+        ordem = it.groupby(chave, dropna=False).cumcount()
+        total = it.groupby(chave, dropna=False)["pedido_id"].transform("size")
+        manter = ordem < (total / k)
+        rep["itens_duplicados_removidos"] = int((~manter).sum())
+        it = it[manter]
+    preco = pd.to_numeric(it["preco_unitario"], errors="coerce")
+    invalido = preco.isna() | (preco <= 0)
+    mediana = preco.groupby(it["produto_id"]).transform("median")
+    suspeito = ~invalido & (preco > 20 * mediana)
+    rep["itens_preco_invalido"] = int(invalido.sum())
+    rep["itens_preco_suspeito"] = int(suspeito.sum())
+    it = it[~invalido & ~suspeito].copy()
+    it["preco_unitario"] = preco[~invalido & ~suspeito]
+    d.items = it
+    neg = d.orders["dias_entrega"] < 0
+    rep["prazos_negativos_anulados"] = int(neg.sum())
+    d.orders.loc[neg, "dias_entrega"] = np.nan
+    rep["total_de_correcoes"] = int(sum(v for v in rep.values()))
+    return rep
+
+
 @lru_cache(maxsize=4)
-def load(db: str) -> Data:
-    return Data(Path(db))
+def load(db: str, limpar: bool = True) -> Data:
+    return Data(Path(db), limpar)
+
+
+def data_quality(d: Data) -> dict:
+    """O que a limpeza corrigiu na carga dos dados (zero em tudo = base já estava limpa)."""
+    return d.qualidade
 
 
 def _r(x, n=2):
