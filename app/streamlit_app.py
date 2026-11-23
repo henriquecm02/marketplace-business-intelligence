@@ -11,6 +11,7 @@ from pathlib import Path
 import altair as alt
 import pandas as pd
 import streamlit as st
+import tema
 from dotenv import load_dotenv
 
 from mbi import analytics as A
@@ -36,11 +37,19 @@ if not DB.exists():
     st.stop()
 d = A.load(str(DB))
 
-st.title("🛋️ Marketplace BI · Casa Lume (fictícia)")
 MESES = "jan fev mar abr mai jun jul ago set out nov dez".split()
-st.caption(f"Dados sintéticos de jan/2024 a {MESES[d.last_day.month - 1]}/{d.last_day.year} · "
-           f"{len(d.orders):,} pedidos".replace(",", "."))
+tema.aplicar_tema(
+    "Marketplace BI · Casa Lume (fictícia)",
+    "KPIs, tendências de categoria, entrega × satisfação, coortes, sazonalidade e previsão, com um analista de IA que "
+    "responde usando ferramentas de análise e SQL somente leitura.",
+    kicker="BI com analista de IA",
+    chips=[f"Dados sintéticos de jan/2024 a {MESES[d.last_day.month - 1]}/{d.last_day.year}",
+           f"{len(d.orders):,} pedidos".replace(",", "."), "Padrões plantados com gabarito"])
 
+# Seis KPIs lado a lado: valor menor para não cortar "R$ 401.234".
+st.html("<style>[data-testid='stMetricValue']{font-size:1.45rem}"
+        "[data-testid='stMetricValue'] div{overflow:visible;text-overflow:clip}"
+        "[data-testid='stMetric']{padding:14px 14px}</style>")
 cmp = A.compare_periods(d, "2026-05-01", "2026-07-31", "2026-08-01", "2026-10-31")
 b, v = cmp["periodo_b"], cmp["variacao_pct_b_sobre_a"]
 cols = st.columns(6)
@@ -62,15 +71,22 @@ with tab_vis:
     m["mes"] = m["data"].dt.to_timestamp()
     f = A.forecast(d)
     fc = pd.DataFrame({"mes": pd.to_datetime(list(f["previsao_receita"])), "valor_total": list(f["previsao_receita"].values())})
-    chart = alt.layer(
-        alt.Chart(m).mark_line(point=True, color="#2563eb").encode(
-            x=alt.X("mes:T", title=None, axis=alt.Axis(format="%m/%y")), y=alt.Y("valor_total:Q", title="Receita (R$)",
-                                                      axis=alt.Axis(labelExpr="replace(format(datum.value, ',.0f'), /,/g, '.')"))),
-        alt.Chart(fc).mark_line(point=True, strokeDash=[5, 4], color="#9ca3af").encode(x="mes:T", y="valor_total:Q"),
+    serie = pd.concat([m[["mes", "valor_total"]].assign(serie="Receita realizada"), fc.assign(serie="Previsão")])
+    chart = alt.Chart(serie).mark_line(point=alt.OverlayMarkDef(size=50, filled=True), strokeWidth=2).encode(
+        x=alt.X("mes:T", title=None, axis=alt.Axis(format="%m/%y")),
+        y=alt.Y("valor_total:Q", title="Receita (R$)",
+                axis=alt.Axis(labelExpr="replace(format(datum.value, ',.0f'), /,/g, '.')")),
+        color=alt.Color("serie:N", title=None, scale=alt.Scale(domain=["Receita realizada", "Previsão"],
+                                                               range=[tema.cor(0), tema.neutro()]),
+                        legend=alt.Legend(orient="top")),
+        strokeDash=alt.StrokeDash("serie:N", legend=None, scale=alt.Scale(domain=["Receita realizada", "Previsão"],
+                                                                         range=[[1, 0], [5, 4]])),
+        tooltip=[alt.Tooltip("serie:N", title=""), alt.Tooltip("mes:T", format="%m/%Y", title="mês"),
+                 alt.Tooltip("valor_total:Q", format=",.0f", title="R$")],
     ).properties(height=320)
     st.altair_chart(chart, use_container_width=True)
     s = A.seasonality(d)
-    st.caption(f"Linha tracejada: previsão sazonal com tendência (erro médio no backtest de 6 meses: "
+    st.caption(f"Linha cinza tracejada: previsão sazonal com tendência (erro médio no backtest de 6 meses: "
                f"{f['mape_backtest_pct']:.1f}%). Pico sazonal em {s['pico']}, vale em {s['vale']}.".replace(".", ",", 1))
 
 with tab_cat:
@@ -78,11 +94,12 @@ with tab_cat:
     df = pd.DataFrame(ct["categorias"])
     c1, c2 = st.columns([3, 2])
     with c1:
-        st.altair_chart(alt.Chart(df).mark_bar().encode(
+        st.altair_chart(alt.Chart(df).mark_bar(cornerRadiusEnd=4).encode(
             x=alt.X("tendencia_participacao_mensal_pct:Q", title="Tendência da participação na receita (% ao mês)"),
             y=alt.Y("categoria:N", sort="x", title=None),
             color=alt.Color("classificacao:N", scale=alt.Scale(domain=["queda", "estavel", "alta"],
-                                                                 range=["#dc2626", "#9ca3af", "#16a34a"]), title=None),
+                                                                 range=[tema.cor(0), tema.neutro(), tema.cor(1)]),
+                            title=None, legend=alt.Legend(orient="top")),
             tooltip=["categoria", "tendencia_participacao_mensal_pct", "estatistica_t", "tendencia_receita_mensal_pct"],
         ).properties(height=260), use_container_width=True)
     with c2:
@@ -92,7 +109,7 @@ with tab_cat:
                     f"{ct['limite_pct']:.0f}% ao mês **e** for estatisticamente distinguível de zero (|t| ≥ 2).")
         st.dataframe(df[["categoria", "classificacao", "tendencia_participacao_mensal_pct", "estatistica_t"]],
                      hide_index=True, use_container_width=True)
-    st.markdown("##### Produtos com maior queda (últimos 3 meses vs. 3 anteriores)")
+    st.subheader("Produtos com maior queda (últimos 3 meses vs. 3 anteriores)")
     st.dataframe(A.product_trends(d)["produtos_em_queda"], hide_index=True, use_container_width=True)
 
 with tab_reg:
@@ -103,9 +120,9 @@ with tab_reg:
     c1, c2, c3 = st.columns(3)
     for col, metric, title in [(c1, "prazo_medio_dias", "Prazo médio (dias)"), (c2, "nota_media", "Nota média"),
                                (c3, "recompra_120d_pct", "Recompra em 120 dias (%)")]:
-        col.altair_chart(alt.Chart(df).mark_bar().encode(
+        col.altair_chart(alt.Chart(df).mark_bar(cornerRadiusEnd=4).encode(
             x=alt.X("fase:N", title=None, sort=["antes", "depois"]), y=alt.Y(f"{metric}:Q", title=title),
-            color=alt.Color("fase:N", legend=None, scale=alt.Scale(range=["#93c5fd", "#1d4ed8"])),
+            color=alt.Color("fase:N", legend=None, scale=alt.Scale(domain=["antes", "depois"], range=[tema.neutro(), tema.cor(0)])),
             column=alt.Column("regiao:N", title=None)).properties(width=48, height=200))
     st.info(f"Maior piora de prazo: **{rd['maior_piora_de_prazo']}**.")
 
@@ -114,7 +131,7 @@ with tab_ret:
     df = pd.DataFrame(cr["coortes"]).T.reset_index(names="coorte").melt("coorte", var_name="mes", value_name="ret")
     st.altair_chart(alt.Chart(df).mark_rect().encode(
         x=alt.X("mes:O", title="Meses após a 1ª compra"), y=alt.Y("coorte:O", title="Coorte"),
-        color=alt.Color("ret:Q", title="% ativos", scale=alt.Scale(scheme="blues")),
+        color=alt.Color("ret:Q", title="% ativos", scale=alt.Scale(range=tema.sequencial())),
         tooltip=["coorte", "mes", "ret"]).properties(height=340), use_container_width=True)
     ch = A.churn(d)
     st.caption(f"Clientes sem comprar há mais de {ch['dias_sem_comprar']} dias: {ch['churn_pct']:.1f}% · "

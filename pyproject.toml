@@ -12,7 +12,7 @@ license = { text = "MIT" }
 dependencies = ["pandas>=2.1", "numpy>=1.26", "python-dotenv>=1.0", "google-genai>=1.0"]
 
 [project.optional-dependencies]
-ui = ["streamlit>=1.35", "altair>=5"]
+ui = ["streamlit>=1.51", "altair>=5"]
 dev = ["pytest>=8"]
 
 [tool.setuptools.packages.find]
